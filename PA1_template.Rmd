@@ -1,25 +1,119 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
 
+# Reproducible Research Peer Assessment - 1
 
-## Loading and preprocessing the data
+=================================================================================================================
 
+This is an R Markdown document which serves as a report for Reproducible Research - Peer Assessment, Assignment-1.
 
+## Loading and pre-processing data
 
-## What is mean total number of steps taken per day?
+Loading the required data into R and examining the data set.
 
+```{r}
+activity <- read.csv("activity.csv")
+head(activity)
+```
 
+## What is the mean total number of steps taken per day?
+
+The total number of steps taken per day were calculated using the aggregate function and stored in a new variable, stepsTotal. The same was plotted on a graph and the corresponding mean and median were calculated using stepsTotal.
+
+```{r, echo=TRUE}
+library(ggplot2)
+
+# Variable to store the total number of steps taken per day
+stepsTotal <- aggregate(steps ~ date, data = activity, sum, na.action = na.pass)
+
+# Plot of number of steps per day
+ggplot(stepsTotal, aes(x = steps)) + geom_histogram(binwidth = 1500, color = "black", fill = "white") + labs(title = "Steps Taken per Day", x = "Number of Steps", y = "Frequency")
+
+mean(stepsTotal$steps, na.rm = TRUE) # Mean of steps/day
+median(stepsTotal$steps, na.rm = TRUE) # Median of steps/day 
+```
 
 ## What is the average daily activity pattern?
 
+The average number of steps taken daily with respect to interval were calculated using the aggregate function and stored in a new variable, stepsAvg, and the same was plotted.
 
+```{r, echo = TRUE}
+
+# Variable to store the average number of steps taken daily by interval
+stepsAvg <- aggregate(steps ~ interval, data = activity, mean, na.rm = TRUE)
+
+# Plot of the average number of steps taken daily vs interval number
+ggplot(stepsAvg, aes(x = interval, y = steps)) + geom_line() + labs(title = "Average of Steps taken Daily", x = "Interval", y = "Number of steps")
+
+# The 5 minute interval that contains the maximum number of steps
+stepsAvg$interval[which.max(stepsAvg$steps)]
+```
 
 ## Imputing missing values
 
+1. Total number of rows with at least one NA value
+```{r}
+sum(complete.cases(activity) == FALSE)
+```
 
+2. Strategy for filling in the missing values in the dataset:
+The mean value of steps for the corresponding interval has been used to replace the missing values in the dataset.
+
+3. Creating an imputed dataset
+```{r}
+library(plyr)
+
+# Creating an imputed dataset using the mean values of steps from their corresponding intervals.
+activity.impute <- adply(activity, 1, function(x) if (is.na(x$steps)){
+    x$steps = round(stepsAvg[stepsAvg$interval == x$interval, 2])
+    x
+} else {
+    x
+})
+```
+
+4. Histogram of imputed total number of steps per day, mean, median and comparision of the new result with the previous result.
+
+```{r, echo = TRUE}
+
+# Variable to store the total imputed number of steps taken per day
+stepsTotal.impute <- aggregate(steps ~ date, data = activity.impute, sum)
+
+# Plot of the imputed number of steps per day
+ggplot(stepsTotal.impute, aes(x = steps)) + geom_histogram(binwidth = 1500, color = "black", fill = "white") + labs(title = "Steps Taken per Day", x = "Number of Steps", y = "Frequency")
+
+mean(stepsTotal.impute$steps) # Mean of imputed steps/day
+median(stepsTotal.impute$steps) # Median of imputed steps/day
+
+# Combining the variables for steps/day of the original and imputed datasets into a new variable and assigning labels for identification
+stepsTotal.all <- rbind(stepsTotal, stepsTotal.impute)
+stepsTotal.all$label[1:61] = "first"
+stepsTotal.all$label[62:122] = "second"
+levels(stepsTotal.all$label) <- c("With NA", "Without NA")
+
+# Plotting a comparative histogram to examine the differences
+ggplot(stepsTotal.all, aes(x = steps, fill = label)) + geom_histogram(binwidth = 1500, colour = "black", alpha = 0.5) + labs(title = "Steps Taken per Day", x = "Number of Steps", y = "Frequency") + theme(legend.position = "bottom")
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r, echo = TRUE}
+
+# Converting the class of date variable to 'Date'
+class(activity.impute$date) = "Date"
+
+# Creating separate subset for weekends and weekdays
+activity.impute.weekend <- subset(activity.impute, weekdays(date) %in% c("Saturday", "Sunday"))
+activity.impute.weekday <- subset(activity.impute, !weekdays(date) %in% c("Saturday", "Sunday"))
+
+# Creating new variables to store the corresponding aggregates
+stepsWeekend <- aggregate(steps ~ interval, data = activity.impute.weekend, mean)
+stepsWeekday <- aggregate(steps ~ interval, data = activity.impute.weekday, mean)
+
+# Creating labels for identification and combining the two variables
+stepsWeekday <- cbind(stepsWeekday, day = "Weekday")
+stepsWeekend <- cbind(stepsWeekend, day = "Weekend")
+activity.impute.week <- rbind(stepsWeekday, stepsWeekend)
+levels(activity.impute.week$day) <- c("Weekday", "Weekend")
+
+# Plot for activity patterns between weekdays and weekends
+ggplot(activity.impute.week, aes(x = interval, y = steps)) + geom_line() + facet_grid(day ~ .) + labs(x = "Interval", y = "Number of steps")
+```
