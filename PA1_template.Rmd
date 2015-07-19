@@ -49,15 +49,15 @@ stepsAvg$interval[which.max(stepsAvg$steps)]
 
 ## Imputing missing values
 
-1. Total number of rows with at least one NA value
+- Total number of rows with at least one NA value
 ```{r}
 sum(complete.cases(activity) == FALSE)
 ```
 
-2. Strategy for filling in the missing values in the dataset:
+- Strategy for filling in the missing values in the dataset:
 The mean value of steps for the corresponding interval has been used to replace the missing values in the dataset.
 
-3. Creating an imputed dataset
+- Creating an imputed dataset
 ```{r}
 library(plyr)
 
@@ -70,7 +70,7 @@ activity.impute <- adply(activity, 1, function(x) if (is.na(x$steps)){
 })
 ```
 
-4. Histogram of imputed total number of steps per day, mean, median and comparision of the new result with the previous result.
+- Histogram of imputed total number of steps per day, mean, median and comparision of the new result with the previous result.
 
 ```{r, echo = TRUE}
 
